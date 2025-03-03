@@ -402,9 +402,13 @@ app.post('/api/schedules', authenticateToken, async (req, res) => {
     const { title, description, start_time, end_time, location } = req.body;
     const created_by = req.user.id;
     
+    if (!title || !start_time || !end_time) {
+      return res.status(400).json({ message: '日程标题、开始时间和结束时间为必填项' });
+    }
+    
     const [result] = await pool.execute(
       'INSERT INTO schedules (title, description, start_time, end_time, location, created_by) VALUES (?, ?, ?, ?, ?, ?)',
-      [title, description, start_time, end_time, location, created_by]
+      [title, description, start_time, end_time, location || '', created_by]
     );
     
     // 添加通知

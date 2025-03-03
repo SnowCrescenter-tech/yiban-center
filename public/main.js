@@ -153,6 +153,11 @@ function addEventListeners() {
       }
     });
   }
+
+  // 公告相关按钮
+  document.getElementById('add-notification-btn')?.addEventListener('click', () => openModal('add-notification-modal'));
+  document.getElementById('save-notification-btn')?.addEventListener('click', handleAddNotification);
+  document.getElementById('notification-type-filter')?.addEventListener('change', filterNotifications);
 }
 
 // 初始化模态框
@@ -164,22 +169,21 @@ function initModals() {
 // 用户登录处理
 async function handleLogin(e) {
   e.preventDefault();
-  
+
   const username = document.getElementById('username').value;
   const password = document.getElementById('password').value;
   const rememberMe = document.getElementById('remember-me').checked;
-  
+
   try {
     const response = await fetch('/api/login', {
       method: 'POST',
-      headers: {
+      headers: { 
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ username, password })
     });
-    
+
     const data = await response.json();
-    
     if (response.ok) {
       // 登录成功
       currentUser = data.user;
@@ -252,7 +256,7 @@ function showPage(pageName) {
         item.classList.add('active');
       }
     });
-    
+
     // 特殊页面处理
     if (pageName === 'login') {
       document.body.classList.add('login-layout');
@@ -1118,10 +1122,11 @@ async function handleAddSchedule() {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     if (!token) return;
 
-    const title = document.getElementById('schedule-title-input').value;
-    const description = document.getElementById('schedule-description-input').value;
-    const startTime = document.getElementById('schedule-start-time-input').value;
-    const endTime = document.getElementById('schedule-end-time-input').value;
+    const title = document.getElementById('schedule-title').value;
+    const description = document.getElementById('schedule-description').value;
+    const location = document.getElementById('schedule-location').value;
+    const startTime = document.getElementById('schedule-start-time').value;
+    const endTime = document.getElementById('schedule-end-time').value;
 
     if (!title || !startTime) {
       alert('请输入日程标题和开始时间');
@@ -1137,6 +1142,7 @@ async function handleAddSchedule() {
       body: JSON.stringify({
         title,
         description,
+        location,
         start_time: startTime,
         end_time: endTime || null
       })
@@ -1212,6 +1218,10 @@ function updateNotificationsPage() {
   notifications.forEach(notification => {
     const notificationElement = document.createElement('div');
     notificationElement.className = `notification-item ${getNotificationTypeClass(notification.type)}`;
+    // 添加数据属性存储引用ID和类型
+    notificationElement.setAttribute('data-reference-id', notification.reference_id || '');
+    notificationElement.setAttribute('data-type', notification.type || '');
+    
     const notificationTime = new Date(notification.created_at).toLocaleString('zh-CN', { 
       year: 'numeric',
       month: 'long',
@@ -1227,6 +1237,9 @@ function updateNotificationsPage() {
       </div>
       <div class="notification-content">${notification.content}</div>
     `;
+    
+    // 添加点击事件处理
+    notificationElement.addEventListener('click', () => handleNotificationClick(notification));
     
     notificationList.appendChild(notificationElement);
   });
@@ -1248,6 +1261,120 @@ function getNotificationTypeClass(type) {
   }
 }
 
+// 筛选通知
+function filterNotifications() {
+  const typeFilter = document.getElementById('notification-type-filter').value;
+  const notificationItems = document.querySelectorAll('#notifications-container .notification-item');
+  
+  notificationItems.forEach(item => {
+    const type = item.getAttribute('data-type');
+    if (typeFilter === 'all' || type === typeFilter) {
+      item.style.display = '';
+    } else {
+      item.style.display = 'none';
+    }
+  });
+}
+
+// 新增：处理通知点击
+function handleNotificationClick(notification) {
+  if (!notification.type || !notification.reference_id) return;
+  
+  switch (notification.type) {
+    case 'task':
+      // 查看任务详情
+      const taskId = notification.reference_id;
+      const task = tasks.find(t => t.id == taskId);
+      if (task) {
+        editTask(taskId); // 使用现有的编辑任务函数打开任务详情
+      } else {
+        // 如果任务不在本地缓存，则重新加载
+        loadTasksData().then(() => {
+          const reloadedTask = tasks.find(t => t.id == taskId);
+          if (reloadedTask) {
+            editTask(taskId);
+          } else {
+            alert('找不到相关任务信息');
+          }
+        });
+      }
+      break;
+      
+    case 'schedule':
+      // 查看日程详情
+      const scheduleId = notification.reference_id;
+      const schedule = schedules.find(s => s.id == scheduleId);
+      if (schedule) {
+        viewScheduleDetails(scheduleId);
+      } else {
+        loadScheduleData().then(() => {
+          const reloadedSchedule = schedules.find(s => s.id == scheduleId);
+          if (reloadedSchedule) {
+            viewScheduleDetails(scheduleId);
+          } else {
+            alert('找不到相关日程信息');
+          }
+        });
+      }
+      break;
+      
+    case 'announcement':
+      // 仅显示公告内容，无需跳转
+      break;
+  }
+}
+
+// 新增：处理发布公告
+async function handleAddNotification() {
+  try {
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    if (!token) return;
+
+    const title = document.getElementById('notification-title').value;
+    const content = document.getElementById('notification-content').value;
+    const isPublic = document.getElementById('notification-public').checked;
+
+    if (!title || !content) {
+      alert('请输入公告标题和内容');
+      return;
+    }
+
+    const response = await fetch('/api/notifications', {
+      method: 'POST',
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        title,
+        content,
+        is_public: isPublic
+      })
+    });
+
+    if (response.ok) {
+      // 关闭模态框
+      const modalElement = document.getElementById('add-notification-modal');
+      const modal = bootstrap.Modal.getInstance(modalElement);
+      modal.hide();
+
+      // 重置表单
+      document.getElementById('add-notification-form').reset();
+
+      // 重新加载数据
+      loadNotificationsData();
+      
+      alert('公告发布成功');
+    } else {
+      const data = await response.json();
+      alert(data.message || '发布公告失败');
+    }
+  } catch (error) {
+    console.error('发布公告错误:', error);
+    alert('发布公告过程中发生错误');
+  }
+}
+
 // 加载成员管理页面数据
 async function loadUsersData() {
   try {
@@ -1263,6 +1390,7 @@ async function loadUsersData() {
     const response = await fetch('/api/users', {
       headers: { 'Authorization': `Bearer ${token}` }
     });
+
     users = await response.json();
     updateUsersTable();
   } catch (error) {
@@ -1380,7 +1508,6 @@ async function handleSaveUser() {
 
     const userId = document.getElementById('user-id').value;
     const isEditing = !!userId;
-
     const username = document.getElementById('user-username').value;
     const password = document.getElementById('user-password').value;
     const name = document.getElementById('user-name').value;
