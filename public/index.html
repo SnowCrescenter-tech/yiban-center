@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>易班新媒体中心工作站</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@4.1.1/animate.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- 侧边导航栏 -->
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <img src="img/logo.png" alt="易班新媒体中心" class="logo">
+      <h3>新媒体中心</h3>
+    </div>
+    <div class="sidebar-menu">
+      <ul>
+        <li class="active" data-page="dashboard">
+          <i class="fas fa-tachometer-alt"></i>
+          <span>工作仪表盘</span>
+        </li>
+        <li data-page="tasks">
+          <i class="fas fa-tasks"></i>
+          <span>任务管理</span>
+        </li>
+        <li data-page="schedule">
+          <i class="fas fa-calendar-alt"></i>
+          <span>日程鱼骨表</span>
+        </li>
+        <li data-page="notifications">
+          <i class="fas fa-bell"></i>
+          <span>通知中心</span>
+        </li>
+        <li data-page="users" class="admin-only">
+          <i class="fas fa-users"></i>
+          <span>成员管理</span>
+        </li>
+        <li data-page="settings">
+          <i class="fas fa-cog"></i>
+          <span>设置</span>
+        </li>
+      </ul>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <img src="img/default-avatar.jpg" alt="用户头像" id="user-avatar">
+        <div class="user-details">
+          <h6 id="user-name">加载中...</h6>
+          <p id="user-role">...</p>
+        </div>
+      </div>
+      <button id="logout-btn" class="btn btn-sm btn-outline-light">
+        <i class="fas fa-sign-out-alt"></i> 退出
+      </button>
+    </div>
+  </nav>
+
+  <!-- 主内容区域 -->
+  <main class="main-content">
+    <!-- 顶部导航栏 -->
+    <header class="top-nav">
+      <button id="sidebar-toggle" class="sidebar-toggle">
+        <i class="fas fa-bars"></i>
+      </button>
+      <div class="search-container">
+        <i class="fas fa-search"></i>
+        <input type="text" placeholder="搜索...">
+      </div>
+      <div class="top-nav-right">
+        <div class="notification-bell">
+          <i class="fas fa-bell"></i>
+          <span class="badge" id="notification-count">0</span>
+        </div>
+        <div class="theme-switch">
+          <i class="fas fa-moon"></i>
+        </div>
+      </div>
+    </header>
+
+    <!-- 内容容器 -->
+    <div class="content-container">
+      <!-- 登录页面 -->
+      <div id="login-page" class="page animate__animated animate__fadeIn">
+        <div class="login-container">
+          <!-- 添加返回按钮 -->
+          <a href="/" class="back-button">
+            <i class="fas fa-arrow-left"></i>
+          </a>
+          
+          <div class="login-form-container">
+            <div class="login-header">
+              <img src="img/logo.png" alt="易班新媒体中心" class="login-logo">
+              <h2>易班新媒体中心</h2>
+              <p>工作站管理系统</p>
+            </div>
+            <form id="login-form">
+              <div class="form-group">
+                <label for="username">用户名</label>
+                <input type="text" id="username" class="form-control" required>
+              </div>
+              <div class="form-group">
+                <label for="password">密码</label>
+                <input type="password" id="password" class="form-control" required>
+              </div>
+              <div class="form-check">
+                <input type="checkbox" id="remember-me" class="form-check-input">
+                <label for="remember-me" class="form-check-label">记住我</label>
+              </div>
+              <button type="submit" class="btn btn-primary btn-block">登录</button>
+            </form>
+            <!-- 移除原来的文本链接 -->
+          </div>
+        </div>
+      </div>
+
+      <!-- 仪表盘页面 -->
+      <div id="dashboard-page" class="page animate__animated animate__fadeIn d-none">
+        <h2 class="page-title">工作仪表盘</h2>
+        <div class="dashboard-stats">
+          <div class="stat-card">
+            <div class="stat-icon bg-primary">
+              <i class="fas fa-tasks"></i>
+            </div>
+            <div class="stat-info">
+              <h3 id="task-count">0</h3>
+              <p>进行中任务</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon bg-success">
+              <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="stat-info">
+              <h3 id="completed-task-count">0</h3>
+              <p>已完成任务</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon bg-warning">
+              <i class="fas fa-calendar-day"></i>
+            </div>
+            <div class="stat-info">
+              <h3 id="today-schedule-count">0</h3>
+              <p>今日日程</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon bg-info">
+              <i class="fas fa-users"></i>
+            </div>
+            <div class="stat-info">
+              <h3 id="member-count">0</h3>
+              <p>团队成员</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="row mt-4">
+          <div class="col-lg-8">
+            <!-- 任务通知栏 -->
+            <div class="card">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">最新任务</h5>
+                <button class="btn btn-sm btn-primary" id="add-task-btn">
+                  <i class="fas fa-plus"></i> 新增任务
+                </button>
+              </div>
+              <div class="card-body">
+                <div class="task-list" id="recent-tasks">
+                  <!-- 任务列表将通过JavaScript动态添加 -->
+                </div>
+              </div>
+              <div class="card-footer">
+                <a href="#" class="view-all" data-page="tasks">查看全部任务</a>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-4">
+            <!-- 通知栏 -->
+            <div class="card">
+              <div class="card-header">
+                <h5 class="mb-0">通知中心</h5>
+              </div>
+              <div class="card-body">
+                <div class="notification-list" id="notification-list">
+                  <!-- 通知列表将通过JavaScript动态添加 -->
+                </div>
+              </div>
+              <div class="card-footer">
+                <a href="#" class="view-all" data-page="notifications">查看全部通知</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 日程鱼骨表预览 -->
+        <div class="row mt-4">
+          <div class="col-12">
+            <div class="card">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">本周日程</h5>
+                <button class="btn btn-sm btn-primary" id="add-schedule-btn">
+                  <i class="fas fa-plus"></i> 新增日程
+                </button>
+              </div>
+              <div class="card-body">
+                <div class="fishbone-chart" id="weekly-fishbone">
+                  <!-- 鱼骨图将通过JavaScript动态生成 -->
+                </div>
+              </div>
+              <div class="card-footer">
+                <a href="#" class="view-all" data-page="schedule">查看完整日程表</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 任务管理页面 -->
+      <div id="tasks-page" class="page animate__animated animate__fadeIn d-none">
+        <h2 class="page-title">任务管理</h2>
+        <div class="filters-container">
+          <div class="filter-group">
+            <select id="task-status-filter" class="form-select">
+              <option value="all">所有状态</option>
+              <option value="pending">待处理</option>
+              <option value="in_progress">进行中</option>
+              <option value="completed">已完成</option>
+              <option value="cancelled">已取消</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <select id="task-priority-filter" class="form-select">
+              <option value="all">所有优先级</option>
+              <option value="low">低</option>
+              <option value="medium">中</option>
+              <option value="high">高</option>
+              <option value="urgent">紧急</option>
+            </select>
+          </div>
+          <div class="action-group">
+            <button class="btn btn-primary" id="add-task-btn-page">
+              <i class="fas fa-plus"></i> 新增任务
+            </button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-hover" id="tasks-table">
+            <thead>
+              <tr>
+                <th>任务标题</th>
+                <th>指派给</th>
+                <th>优先级</th>
+                <th>状态</th>
+                <th>截止日期</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="tasks-table-body">
+              <!-- 任务列表将通过JavaScript动态添加 -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 日程鱼骨表页面 -->
+      <div id="schedule-page" class="page animate__animated animate__fadeIn d-none">
+        <h2 class="page-title">日程鱼骨表</h2>
+        <div class="controls-container">
+          <div class="date-navigation">
+            <button id="prev-week" class="btn btn-outline-primary">
+              <i class="fas fa-chevron-left"></i> 上一周
+            </button>
+            <h4 id="current-week-range">2023年第24周 (6月12日 - 6月18日)</h4>
+            <button id="next-week" class="btn btn-outline-primary">
+              下一周 <i class="fas fa-chevron-right"></i>
+            </button>
+          </div>
+          <div class="action-group">
+            <button class="btn btn-primary" id="add-schedule-btn-page">
+              <i class="fas fa-plus"></i> 新增日程
+            </button>
+          </div>
+        </div>
+
+        <div class="fishbone-container">
+          <div class="fishbone-chart-full" id="fishbone-chart">
+            <!-- 鱼骨图将通过JavaScript动态生成 -->
+          </div>
+        </div>
+        
+        <div class="upcoming-schedules">
+          <h4>即将到来的日程</h4>
+          <div class="upcoming-list" id="upcoming-schedules-list">
+            <!-- 即将到来的日程将通过JavaScript动态添加 -->
+          </div>
+        </div>
+      </div>
+
+      <!-- 通知中心页面 -->
+      <div id="notifications-page" class="page animate__animated animate__fadeIn d-none">
+        <h2 class="page-title">通知中心</h2>
+        <div class="filters-container">
+          <div class="filter-group">
+            <select id="notification-type-filter" class="form-select">
+              <option value="all">所有通知类型</option>
+              <option value="announcement">公告</option>
+              <option value="task">任务</option>
+              <option value="schedule">日程</option>
+            </select>
+          </div>
+          <div class="action-group admin-only">
+            <button class="btn btn-primary" id="add-notification-btn">
+              <i class="fas fa-plus"></i> 发布公告
+            </button>
+          </div>
+        </div>
+
+        <div id="notifications-container">
+          <!-- 通知内容将通过JavaScript动态添加 -->
+        </div>
+      </div>
+
+      <!-- 成员管理页面 -->
+      <div id="users-page" class="page animate__animated animate__fadeIn d-none">
+        <h2 class="page-title">成员管理</h2>
+        <div class="filters-container">
+          <div class="filter-group">
+            <select id="user-role-filter" class="form-select">
+              <option value="all">所有角色</option>
+              <option value="admin">管理员</option>
+              <option value="member">成员</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <select id="user-department-filter" class="form-select">
+              <option value="all">所有部门</option>
+              <option value="视觉传达部">视觉传达部</option>
+              <option value="内容创作部">内容创作部</option>
+              <option value="活动策划部">活动策划部</option>
+              <option value="技术支持部">技术支持部</option>
+            </select>
+          </div>
+          <div class="action-group">
+            <button class="btn btn-primary" id="add-user-btn">
+              <i class="fas fa-plus"></i> 新增成员
+            </button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-hover" id="users-table">
+            <thead>
+              <tr>
+                <th width="60">头像</th>
+                <th>用户名</th>
+                <th>姓名</th>
+                <th>部门</th>
+                <th>角色</th>
+                <th>加入时间</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="users-table-body">
+              <!-- 用户列表将通过JavaScript动态添加 -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+    </div>
+  </main>
+
+  <!-- 模态框 - 添加任务 -->
+  <div class="modal fade" id="add-task-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">添加新任务</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="add-task-form">
+            <div class="mb-3">
+              <label for="task-title" class="form-label">任务标题</label>
+              <input type="text" class="form-control" id="task-title" required>
+            </div>
+            <div class="mb-3">
+              <label for="task-description" class="form-label">任务描述</label>
+              <textarea class="form-control" id="task-description" rows="3"></textarea>
+            </div>
+            <div class="mb-3">
+              <label for="task-assigned-to" class="form-label">指派给</label>
+              <select class="form-select" id="task-assigned-to">
+                <!-- 用户列表将通过JavaScript动态添加 -->
+              </select>
+            </div>
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label for="task-priority" class="form-label">优先级</label>
+                <select class="form-select" id="task-priority">
+                  <option value="low">低</option>
+                  <option value="medium" selected>中</option>
+                  <option value="high">高</option>
+                  <option value="urgent">紧急</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label for="task-due-date" class="form-label">截止日期</label>
+                <input type="datetime-local" class="form-control" id="task-due-date">
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+          <button type="button" class="btn btn-primary" id="save-task-btn">保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 模态框 - 添加日程 -->
+  <div class="modal fade" id="add-schedule-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">添加新日程</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="add-schedule-form">
+            <div class="mb-3">
+              <label for="schedule-title" class="form-label">日程标题</label>
+              <input type="text" class="form-control" id="schedule-title" required>
+            </div>
+            <div class="mb-3">
+              <label for="schedule-description" class="form-label">日程描述</label>
+              <textarea class="form-control" id="schedule-description" rows="2"></textarea>
+            </div>
+            <div class="mb-3">
+              <label for="schedule-location" class="form-label">地点</label>
+              <input type="text" class="form-control" id="schedule-location">
+            </div>
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label for="schedule-start-time" class="form-label">开始时间</label>
+                <input type="datetime-local" class="form-control" id="schedule-start-time" required>
+              </div>
+              <div class="col-md-6">
+                <label for="schedule-end-time" class="form-label">结束时间</label>
+                <input type="datetime-local" class="form-control" id="schedule-end-time" required>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+          <button type="button" class="btn btn-primary" id="save-schedule-btn">保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 模态框 - 发布公告 -->
+  <div class="modal fade" id="add-notification-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">发布新公告</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="add-notification-form">
+            <div class="mb-3">
+              <label for="notification-title" class="form-label">公告标题</label>
+              <input type="text" class="form-control" id="notification-title" required>
+            </div>
+            <div class="mb-3">
+              <label for="notification-content" class="form-label">公告内容</label>
+              <textarea class="form-control" id="notification-content" rows="5" required></textarea>
+            </div>
+            <div class="mb-3 form-check">
+              <input type="checkbox" class="form-check-input" id="notification-public" checked>
+              <label class="form-check-label" for="notification-public">公开给所有成员</label>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+          <button type="button" class="btn btn-primary" id="save-notification-btn">发布</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 模态框 - 添加/编辑成员 -->
+  <div class="modal fade" id="user-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">添加新成员</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="user-form">
+            <div class="mb-3 text-center">
+              <div class="avatar-upload">
+                <img src="img/default-avatar.jpg" alt="用户头像" id="avatar-preview" class="rounded-circle" width="100" height="100">
+                <label for="avatar-input" class="btn btn-sm btn-outline-primary mt-2">
+                  <i class="fas fa-camera"></i> 更换头像
+                </label>
+                <input type="file" id="avatar-input" accept="image/*" style="display:none">
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="user-username" class="form-label">用户名</label>
+              <input type="text" class="form-control" id="user-username" required>
+              <small class="text-muted">用于登录系统，创建后不可修改</small>
+            </div>
+            <div class="mb-3">
+              <label for="user-password" class="form-label">密码</label>
+              <input type="password" class="form-control" id="user-password" autocomplete="new-password">
+              <small class="text-muted">编辑模式下留空表示不修改密码</small>
+            </div>
+            <div class="mb-3">
+              <label for="user-name" class="form-label">姓名</label>
+              <input type="text" class="form-control" id="user-name" required>
+            </div>
+            <div class="mb-3">
+              <label for="user-department" class="form-label">部门</label>
+              <select class="form-select" id="user-department">
+                <option value="">-- 选择部门 --</option>
+                <option value="视觉传达部">视觉传达部</option>
+                <option value="内容创作部">内容创作部</option>
+                <option value="活动策划部">活动策划部</option>
+                <option value="技术支持部">技术支持部</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="user-role" class="form-label">角色</label>
+              <select class="form-select" id="user-role">
+                <option value="member">成员</option>
+                <option value="admin">管理员</option>
+              </select>
+            </div>
+            <input type="hidden" id="user-id">
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+          <button type="button" class="btn btn-primary" id="save-user-btn">保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 模态框 - 日程详情 -->
+  <div class="modal fade" id="schedule-details-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">日程详情</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="schedule-details">
+            <h4 id="schedule-title" class="mb-3">加载中...</h4>
+            
+            <div class="detail-item">
+              <div class="detail-label">描述</div>
+              <div id="schedule-description" class="detail-content">加载中...</div>
+            </div>
+            
+            <div class="detail-item">
+              <div class="detail-label">开始时间</div>
+              <div id="schedule-start-time" class="detail-content">加载中...</div>
+            </div>
+            
+            <div class="detail-item">
+              <div class="detail-label">结束时间</div>
+              <div id="schedule-end-time" class="detail-content">加载中...</div>
+            </div>
+            
+            <div class="detail-item">
+              <div class="detail-label">地点</div>
+              <div id="schedule-location" class="detail-content">加载中...</div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+          <button type="button" class="btn btn-primary admin-only" id="edit-schedule-btn">编辑</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript 引用 -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
