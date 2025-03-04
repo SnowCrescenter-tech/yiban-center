@@ -70,10 +70,26 @@
         <input type="text" placeholder="搜索...">
       </div>
       <div class="top-nav-right">
-        <div class="notification-bell">
+        <div class="notification-bell" id="notification-bell">
           <i class="fas fa-bell"></i>
           <span class="badge" id="notification-count">0</span>
+          
+          <!-- 添加通知下拉菜单 -->
+          <div class="notification-dropdown" id="notification-dropdown">
+            <div class="notification-dropdown-header">
+              <h6>通知中心</h6>
+              <span class="close-notification"><i class="fas fa-times"></i></span>
+            </div>
+            <div class="notification-dropdown-body" id="notification-dropdown-list">
+              <!-- 通知将由JavaScript动态填充 -->
+              <div class="dropdown-notification-placeholder">加载中...</div>
+            </div>
+            <div class="notification-dropdown-footer">
+              <a href="#" class="view-all-link" data-page="notifications">查看全部通知</a>
+            </div>
+          </div>
         </div>
+        
         <div class="theme-switch">
           <i class="fas fa-moon"></i>
         </div>
@@ -85,8 +101,8 @@
       <!-- 登录页面 -->
       <div id="login-page" class="page animate__animated animate__fadeIn">
         <div class="login-container">
-          <!-- 添加返回按钮 -->
-          <a href="/" class="back-button">
+          <!-- 确保返回按钮正确设置，添加style确保显示 -->
+          <a href="/" class="back-button" style="display: flex; z-index: 1000;">
             <i class="fas fa-arrow-left"></i>
           </a>
           
@@ -115,7 +131,7 @@
           </div>
         </div>
       </div>
-
+      
       <!-- 仪表盘页面 -->
       <div id="dashboard-page" class="page animate__animated animate__fadeIn d-none">
         <h2 class="page-title">工作仪表盘</h2>
@@ -157,7 +173,6 @@
             </div>
           </div>
         </div>
-
         <div class="row mt-4">
           <div class="col-lg-8">
             <!-- 任务通知栏 -->
@@ -195,7 +210,7 @@
             </div>
           </div>
         </div>
-
+        
         <!-- 日程鱼骨表预览 -->
         <div class="row mt-4">
           <div class="col-12">
@@ -218,7 +233,7 @@
           </div>
         </div>
       </div>
-
+      
       <!-- 任务管理页面 -->
       <div id="tasks-page" class="page animate__animated animate__fadeIn d-none">
         <h2 class="page-title">任务管理</h2>
@@ -247,7 +262,6 @@
             </button>
           </div>
         </div>
-
         <div class="table-responsive">
           <table class="table table-hover" id="tasks-table">
             <thead>
@@ -266,7 +280,7 @@
           </table>
         </div>
       </div>
-
+      
       <!-- 日程鱼骨表页面 -->
       <div id="schedule-page" class="page animate__animated animate__fadeIn d-none">
         <h2 class="page-title">日程鱼骨表</h2>
@@ -286,13 +300,11 @@
             </button>
           </div>
         </div>
-
         <div class="fishbone-container">
           <div class="fishbone-chart-full" id="fishbone-chart">
             <!-- 鱼骨图将通过JavaScript动态生成 -->
           </div>
         </div>
-        
         <div class="upcoming-schedules">
           <h4>即将到来的日程</h4>
           <div class="upcoming-list" id="upcoming-schedules-list">
@@ -300,7 +312,7 @@
           </div>
         </div>
       </div>
-
+      
       <!-- 通知中心页面 -->
       <div id="notifications-page" class="page animate__animated animate__fadeIn d-none">
         <h2 class="page-title">通知中心</h2>
@@ -319,12 +331,11 @@
             </button>
           </div>
         </div>
-
         <div id="notifications-container">
           <!-- 通知内容将通过JavaScript动态添加 -->
         </div>
       </div>
-
+      
       <!-- 成员管理页面 -->
       <div id="users-page" class="page animate__animated animate__fadeIn d-none">
         <h2 class="page-title">成员管理</h2>
@@ -346,12 +357,14 @@
             </select>
           </div>
           <div class="action-group">
-            <button class="btn btn-primary" id="add-user-btn">
+            <button class="btn btn-primary me-2" id="add-user-btn">
               <i class="fas fa-plus"></i> 新增成员
+            </button>
+            <button class="btn btn-success" id="import-users-btn">
+              <i class="fas fa-file-import"></i> 批量导入
             </button>
           </div>
         </div>
-
         <div class="table-responsive">
           <table class="table table-hover" id="users-table">
             <thead>
@@ -372,19 +385,122 @@
         </div>
       </div>
       
+      <!-- 添加设置页面 -->
+          <!-- 个人设置卡片 -->
+          <div class="col-lg-6 mb-4">
+            <div class="card">
+              <div class="card-header">
+                <h5 class="mb-0">个人设置</h5>
+              </div>
+              <div class="card-body">
+                <form id="personal-settings-form">
+                  <div class="mb-3">
+                    <label for="personal-name" class="form-label">姓名</label>
+                    <input type="text" class="form-control" id="personal-name">
+                  </div>
+                  <div class="mb-3">
+                    <label for="personal-department" class="form-label">部门</label>
+                    <select class="form-select" id="personal-department">
+                      <option value="">-- 选择部门 --</option>
+                      <option value="视觉传达部">视觉传达部</option>
+                      <option value="内容创作部">内容创作部</option>
+                      <option value="活动策划部">活动策划部</option>
+                      <option value="技术支持部">技术支持部</option>
+                    </select>
+                  </div>
+                  <div class="mb-4">
+                    <label for="personal-password" class="form-label">修改密码</label>
+                    <input type="password" class="form-control mb-2" id="personal-password" placeholder="输入新密码">
+                    <input type="password" class="form-control" id="personal-password-confirm" placeholder="确认新密码">
+                    <small class="text-muted">留空表示不修改密码</small>
+                  </div>
+                  <button type="button" class="btn btn-primary" id="save-personal-settings-btn">保存个人设置</button>
+                </form>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 系统设置卡片 -->
+          <div class="col-lg-6 mb-4">
+            <div class="card">
+              <div class="card-header">
+                <h5 class="mb-0">系统设置</h5>
+              </div>
+              <div class="card-body">
+                <form id="system-settings-form">
+                  <div class="mb-3">
+                    <label class="d-block mb-2">界面主题</label>
+                    <div class="form-check form-check-inline">
+                      <input class="form-check-input" type="radio" name="theme" id="theme-light" value="light" checked>
+                      <label class="form-check-label" for="theme-light">浅色</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                      <input class="form-check-input" type="radio" name="theme" id="theme-dark" value="dark">
+                      <label class="form-check-label" for="theme-dark">深色</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                      <input class="form-check-input" type="radio" name="theme" id="theme-auto" value="auto">
+                      <label class="form-check-label" for="theme-auto">跟随系统</label>
+                    </div>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">通知设置</label>
+                    <div class="form-check form-switch mb-2">
+                      <input class="form-check-input" type="checkbox" id="email-notifications" checked>
+                      <label class="form-check-label" for="email-notifications">接收邮件通知</label>
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                      <input class="form-check-input" type="checkbox" id="task-notifications" checked>
+                      <label class="form-check-label" for="task-notifications">任务通知</label>
+                    </div>
+                    <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" id="system-notifications" checked>
+                      <label class="form-check-label" for="system-notifications">系统通知</label>
+                    </div>
+                  </div>
+                  <button type="button" class="btn btn-primary" id="save-system-settings-btn">保存系统设置</button>
+                </form>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 系统信息卡片 -->
+          <div class="col-12">
+            <div class="card">
+              <div class="card-header">
+                <h5 class="mb-0">系统信息</h5>
+              </div>
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-md-6">
+                    <p><strong>系统版本：</strong> v1.0.0</p>
+                    <p><strong>前端框架：</strong> Bootstrap 5.3.0</p>
+                    <p><strong>后端服务：</strong> Express 4.18.2</p>
+                  </div>
+                  <div class="col-md-6">
+                    <p><strong>服务器状态：</strong> <span class="badge bg-success">正常</span></p>
+                    <p><strong>最后更新：</strong> 2023-06-15</p>
+                    <p><strong>客户端：</strong> <span id="browser-info">--</span></p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </main>
 
   <!-- 模态框 - 添加任务 -->
   <div class="modal fade" id="add-task-modal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title">添加新任务</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
-          <form id="add-task-form">
+          <form id="add-task-form" data-editing="false" data-task-id="">
             <div class="mb-3">
               <label for="task-title" class="form-label">任务标题</label>
               <input type="text" class="form-control" id="task-title" required>
@@ -393,12 +509,50 @@
               <label for="task-description" class="form-label">任务描述</label>
               <textarea class="form-control" id="task-description" rows="3"></textarea>
             </div>
+            
+            <!-- 部门任务选项 -->
+            <div class="mb-3 form-check">
+              <input type="checkbox" class="form-check-input" id="task-is-department-task">
+              <label class="form-check-label" for="task-is-department-task">部门任务</label>
+            </div>
+            
+            <!-- 部门选择 -->
+            <div class="mb-3" style="display: none;">
+              <label for="task-department" class="form-label">所属部门</label>
+              <select class="form-select" id="task-department">
+                <option value="">-- 选择部门 --</option>
+                <option value="视觉传达部">视觉传达部</option>
+                <option value="内容创作部">内容创作部</option>
+                <option value="活动策划部">活动策划部</option>
+                <option value="技术支持部">技术支持部</option>
+              </select>
+            </div>
+            
             <div class="mb-3">
               <label for="task-assigned-to" class="form-label">指派给</label>
               <select class="form-select" id="task-assigned-to">
+                <option value="">-- 选择用户 --</option>
                 <!-- 用户列表将通过JavaScript动态添加 -->
               </select>
             </div>
+            
+            <!-- 任务成员管理 -->
+            <div class="mb-3" id="task-members-section" style="display: none;">
+              <label class="form-label">任务成员</label>
+              <div class="input-group mb-2">
+                <select class="form-select" id="task-add-member">
+                  <option value="">-- 添加任务成员 --</option>
+                  <!-- 用户列表将通过JavaScript动态添加 -->
+                </select>
+                <button class="btn btn-outline-secondary" type="button" id="add-member-btn">
+                  <i class="fas fa-plus"></i>
+                </button>
+              </div>
+              <ul class="list-group" id="task-members-list">
+                <li class="list-group-item text-muted">暂未添加成员</li>
+              </ul>
+            </div>
+            
             <div class="row mb-3">
               <div class="col-md-6">
                 <label for="task-priority" class="form-label">优先级</label>
@@ -544,8 +698,8 @@
             <div class="mb-3">
               <label for="user-role" class="form-label">角色</label>
               <select class="form-select" id="user-role">
-                <option value="member">成员</option>
                 <option value="admin">管理员</option>
+                <option value="member">成员</option>
               </select>
             </div>
             <input type="hidden" id="user-id">
@@ -570,22 +724,18 @@
         <div class="modal-body">
           <div class="schedule-details">
             <h4 id="schedule-title" class="mb-3">加载中...</h4>
-            
             <div class="detail-item">
               <div class="detail-label">描述</div>
               <div id="schedule-description" class="detail-content">加载中...</div>
             </div>
-            
             <div class="detail-item">
               <div class="detail-label">开始时间</div>
               <div id="schedule-start-time" class="detail-content">加载中...</div>
             </div>
-            
             <div class="detail-item">
               <div class="detail-label">结束时间</div>
               <div id="schedule-end-time" class="detail-content">加载中...</div>
             </div>
-            
             <div class="detail-item">
               <div class="detail-label">地点</div>
               <div id="schedule-location" class="detail-content">加载中...</div>
@@ -600,9 +750,69 @@
     </div>
   </div>
 
+  <!-- 批量导入用户模态框 -->
+  <div class="modal fade" id="batch-import-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">批量导入用户</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="batch-import-form" enctype="multipart/form-data">
+            <div class="mb-4">
+              <h6>使用说明</h6>
+              <p class="text-muted small">
+                请上传Excel文件(.xlsx或.xls格式)，包含用户名、密码、姓名等信息。
+                <a href="#" id="template-btn" class="text-primary">查看模板格式</a>
+              </p>
+            </div>
+            <div class="mb-3">
+              <label for="excel-file" class="form-label">Excel文件</label>
+              <div class="input-group">
+                <input type="file" class="form-control" id="excel-file" accept=".xlsx,.xls" required>
+              </div>
+            </div>
+          </form>
+          
+          <!-- 导入结果显示 -->
+          <div id="import-result" style="display: none;">
+            <hr>
+            <h6>导入结果</h6>
+            <div class="row text-center mb-2">
+              <div class="col-4">
+                <div class="fw-bold">总数</div>
+                <div id="total-count">0</div>
+              </div>
+              <div class="col-4">
+                <div class="fw-bold text-success">成功</div>
+                <div id="success-count">0</div>
+              </div>
+              <div class="col-4">
+                <div class="fw-bold text-danger">失败</div>
+                <div id="failed-count">0</div>
+              </div>
+            </div>
+            <div id="error-details" style="display: none;">
+              <div class="small mt-2 text-danger">错误明细：</div>
+              <ul class="small text-danger" id="error-list"></ul>
+            </div>
+          </div>
+          
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+          <button type="button" class="btn btn-primary" id="start-import-btn">开始导入</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- JavaScript 引用 -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
   <script src="main.js"></script>
+  <script src="js/user-management.js"></script>
+  <script src="js/task-management.js"></script>
 </body>
 </html>

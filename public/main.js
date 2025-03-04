@@ -17,6 +17,11 @@ document.addEventListener('DOMContentLoaded', () => {
 function initApp() {
   // 检查本地存储中的令牌
   const token = localStorage.getItem('token');
+  
+  // 应用保存的主题设置
+  const savedTheme = localStorage.getItem('theme') || 'light';
+  setTheme(savedTheme);
+  
   if (token) {
     // 尝试使用令牌自动登录
     autoLogin(token);
@@ -55,7 +60,7 @@ async function autoLogin(token) {
       showPage('login');
     }
   } catch (error) {
-    console.error('自动登录失败:', error);
+    handleApiError(error, '自动登录失败');
     localStorage.removeItem('token');
     showPage('login');
   }
@@ -158,18 +163,75 @@ function addEventListeners() {
   document.getElementById('add-notification-btn')?.addEventListener('click', () => openModal('add-notification-modal'));
   document.getElementById('save-notification-btn')?.addEventListener('click', handleAddNotification);
   document.getElementById('notification-type-filter')?.addEventListener('change', filterNotifications);
+
+  // 通知铃铛点击事件
+  document.getElementById('notification-bell')?.addEventListener('click', toggleNotificationDropdown);
+  
+  // 关闭通知下拉菜单按钮
+  document.querySelector('.close-notification')?.addEventListener('click', function(e) {
+    e.stopPropagation();
+    toggleNotificationDropdown();
+  });
+  
+  // 点击其他区域关闭通知下拉菜单
+  document.addEventListener('click', function(e) {
+    const notificationBell = document.getElementById('notification-bell');
+    const notificationDropdown = document.getElementById('notification-dropdown');
+    
+    if (notificationDropdown && notificationDropdown.classList.contains('show') && 
+        !notificationBell.contains(e.target)) {
+      toggleNotificationDropdown();
+    }
+  });
+  
+  // "查看全部通知"链接
+  document.querySelector('.notification-dropdown-footer .view-all-link')?.addEventListener('click', function(e) {
+    e.preventDefault();
+    const page = this.getAttribute('data-page');
+    showPage(page);
+    // 关闭通知下拉菜单
+    document.getElementById('notification-dropdown').classList.remove('show');
+    // 加载通知数据
+    loadNotificationsData();
+  });
+
+  // 设置页面相关按钮
+  document.getElementById('save-personal-settings-btn')?.addEventListener('click', savePersonalSettings);
+  document.getElementById('save-system-settings-btn')?.addEventListener('click', saveSystemSettings);
+
+  // 主题设置选项
+  document.getElementById('theme-light')?.addEventListener('change', function() {
+    if (this.checked) setTheme('light');
+  });
+  
+  document.getElementById('theme-dark')?.addEventListener('change', function() {
+    if (this.checked) setTheme('dark');
+  });
+  
+  document.getElementById('theme-auto')?.addEventListener('change', function() {
+    if (this.checked) setTheme('auto');
+  });
 }
 
-// 初始化模态框
+// 初始化Bootstrap模态框
 function initModals() {
-  // 为任务模态框加载用户列表
-  loadUsersForTaskAssignment();
+  // 在任务模态框显示前，加载用户列表
+  const taskModal = document.getElementById('add-task-modal');
+  if (taskModal) {
+    taskModal.addEventListener('show.bs.modal', function () {
+      loadUsersForTaskAssignment();
+      // 如果是添加新任务，重置表单和标题
+      if (!document.getElementById('add-task-form').dataset.editing) {
+        document.getElementById('add-task-form').reset();
+        document.querySelector('#add-task-modal .modal-title').textContent = '添加新任务';
+      }
+    });
+  }
 }
 
 // 用户登录处理
 async function handleLogin(e) {
   e.preventDefault();
-
   const username = document.getElementById('username').value;
   const password = document.getElementById('password').value;
   const rememberMe = document.getElementById('remember-me').checked;
@@ -194,7 +256,6 @@ async function handleLogin(e) {
       } else {
         sessionStorage.setItem('token', data.token);
       }
-      
       updateUserInfo();
       showPage('dashboard');
       loadDashboardData();
@@ -203,8 +264,7 @@ async function handleLogin(e) {
       alert(data.message || '登录失败，请检查用户名和密码');
     }
   } catch (error) {
-    console.error('登录错误:', error);
-    alert('登录过程中发生错误，请稍后再试');
+    handleApiError(error, '登录过程中发生错误，请稍后再试');
   }
 }
 
@@ -259,18 +319,30 @@ function showPage(pageName) {
 
     // 特殊页面处理
     if (pageName === 'login') {
+      // 添加登录页面专用样式
       document.body.classList.add('login-layout');
-      document.querySelector('.sidebar').classList.add('d-none');
+      // 确保侧边栏隐藏，主内容区域扩展到全宽
+      document.querySelector('.sidebar').style.display = 'none';
       document.querySelector('.main-content').classList.add('full-width');
+      // 确保返回按钮可见
+      const backButton = document.querySelector('.login-container .back-button');
+      if (backButton) {
+        backButton.style.display = 'flex';
+      }
     } else {
       document.body.classList.remove('login-layout');
-      document.querySelector('.sidebar').classList.remove('d-none');
+      document.querySelector('.sidebar').style.display = 'flex';
       document.querySelector('.main-content').classList.remove('full-width');
     }
     
     // 针对用户页面的额外处理
     if (pageName === 'users') {
       loadUsersData();
+    }
+    
+    // 针对设置页面的额外处理
+    if (pageName === 'settings') {
+      loadSettingsData();
     }
   }
 }
@@ -315,10 +387,12 @@ async function loadDashboardData() {
 
     // 更新鱼骨图
     updateWeeklyFishbone();
+    
+    // 更新通知计数
+    updateNotificationCount();
 
   } catch (error) {
-    console.error('加载仪表盘数据失败:', error);
-    alert('加载数据失败，请刷新页面重试');
+    handleApiError(error, '加载仪表盘数据失败，请刷新页面重试');
   }
 }
 
@@ -364,12 +438,12 @@ function updateRecentTasks() {
   recentTasks.forEach(task => {
     const taskElement = document.createElement('div');
     taskElement.className = `task-item priority-${task.priority}`;
-    
+
     const assigneeName = task.assignee_name || '未指派';
     const dueDate = task.due_date ? new Date(task.due_date).toLocaleString('zh-CN', { 
       year: 'numeric', 
       month: 'long', 
-      day: 'numeric',
+      day: 'numeric', 
       hour: '2-digit',
       minute: '2-digit'
     }) : '无截止日期';
@@ -423,7 +497,7 @@ function updateNotifications() {
     
     const notificationTime = new Date(notification.created_at).toLocaleString('zh-CN', { 
       year: 'numeric', 
-      month: 'long', 
+      month: 'long',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
@@ -436,12 +510,9 @@ function updateNotifications() {
       </div>
       <div class="notification-content">${notification.content}</div>
     `;
-
+    
     notificationListContainer.appendChild(notificationElement);
-  });  
-
-  // 更新通知计数
-  document.getElementById('notification-count').textContent = notifications.length;
+  });
 }
 
 // 更新周度鱼骨图
@@ -499,7 +570,7 @@ function updateWeeklyFishbone() {
              scheduleDate.getMonth() === dayDate.getMonth() && 
              scheduleDate.getFullYear() === dayDate.getFullYear();
     });
-    
+
     // 将日程分为上午和下午
     daySchedules.forEach(schedule => {
       const scheduleTime = new Date(schedule.start_time);
@@ -517,7 +588,7 @@ function updateWeeklyFishbone() {
         timeClass = 'fishbone-event-evening';
         eventsBottom.appendChild(eventElement);
       }
-      
+
       eventElement.className = `fishbone-event ${timeClass}`;
       eventElement.textContent = schedule.title;
       eventElement.setAttribute('data-schedule-id', schedule.id);
@@ -525,7 +596,7 @@ function updateWeeklyFishbone() {
       // 添加点击事件查看详情
       eventElement.addEventListener('click', () => viewScheduleDetails(schedule.id));
     });
-    
+
     dayElement.appendChild(eventsTop);
     dayElement.appendChild(dayLabel);
     dayElement.appendChild(eventsBottom);
@@ -568,8 +639,7 @@ async function loadTasksData() {
     tasks = await response.json();
     updateTasksTable();
   } catch (error) {
-    console.error('加载任务数据失败:', error);
-    alert('加载任务数据失败，请刷新页面重试');
+    handleApiError(error, '加载任务数据失败，请刷新页面重试');
   }
 }
 
@@ -605,8 +675,8 @@ function updateTasksTable() {
     const dueDate = task.due_date ? new Date(task.due_date).toLocaleString('zh-CN', { 
       year: 'numeric', 
       month: 'long', 
-      day: 'numeric',
-      hour: '2-digit',
+      day: 'numeric', 
+      hour: '2-digit', 
       minute: '2-digit'
     }) : '无截止日期';
 
@@ -694,7 +764,7 @@ async function loadUsersForTaskAssignment() {
       selectElement.appendChild(option);
     });
   } catch (error) {
-    console.error('加载用户列表失败:', error);
+    handleApiError(error, '加载用户列表失败');
   }
 }
 
@@ -721,7 +791,7 @@ async function handleAddTask() {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
+      body: JSON.stringify({ 
         title,
         description,
         assigned_to: assignedTo || null,
@@ -736,8 +806,9 @@ async function handleAddTask() {
       const modal = bootstrap.Modal.getInstance(modalElement);
       modal.hide();
 
-      // 重置表单
+      // 重置表单数据
       document.getElementById('add-task-form').reset();
+      document.getElementById('add-task-form').dataset.editing = '';
 
       // 重新加载数据
       if (currentPage === 'dashboard') {
@@ -752,8 +823,7 @@ async function handleAddTask() {
       alert(data.message || '创建任务失败');
     }
   } catch (error) {
-    console.error('创建任务错误:', error);
-    alert('创建任务过程中发生错误');
+    handleApiError(error, '创建任务过程中发生错误');
   }
 }
 
@@ -762,6 +832,9 @@ function editTask(taskId) {
   // 找到对应的任务
   const task = tasks.find(t => t.id == taskId);
   if (!task) return;
+
+  // 设置编辑模式标记
+  document.getElementById('add-task-form').dataset.editing = 'true';
 
   // 填充表单
   document.getElementById('task-title').value = task.title;
@@ -832,6 +905,7 @@ async function updateTask(taskId) {
 
       // 重置表单
       document.getElementById('add-task-form').reset();
+      document.getElementById('add-task-form').dataset.editing = '';
 
       // 修改回模态框标题
       document.querySelector('#add-task-modal .modal-title').textContent = '添加任务';
@@ -849,8 +923,7 @@ async function updateTask(taskId) {
       alert(data.message || '更新任务失败');
     }
   } catch (error) {
-    console.error('更新任务错误:', error);
-    alert('更新任务过程中发生错误');
+    handleApiError(error, '更新任务过程中发生错误');
   }
 }
 
@@ -881,8 +954,7 @@ async function deleteTask(taskId) {
       alert(data.message || '删除任务失败');
     }
   } catch (error) {
-    console.error('删除任务错误:', error);
-    alert('删除任务过程中发生错误');
+    handleApiError(error, '删除任务过程中发生错误');
   }
 }
 
@@ -913,8 +985,7 @@ async function toggleTaskStatus(taskId, completed) {
       alert(data.message || '更新任务状态失败');
     }
   } catch (error) {
-    console.error('更新任务状态错误:', error);
-    alert('更新任务状态过程中发生错误');
+    handleApiError(error, '更新任务状态过程中发生错误');
   }
 }
 
@@ -932,8 +1003,7 @@ async function loadScheduleData() {
     updateFullFishbone();
     loadUpcomingSchedules();
   } catch (error) {
-    console.error('加载日程数据失败:', error);
-    alert('加载日程数据失败，请刷新页面重试');
+    handleApiError(error, '加载日程数据失败，请刷新页面重试');
   }
 }
 
@@ -945,7 +1015,7 @@ function updateFullFishbone() {
     console.warn('找不到鱼骨图容器元素 #fishbone-chart');
     return;
   }
-  
+
   fishboneContainer.innerHTML = '';
 
   // 创建鱼骨架
@@ -959,7 +1029,6 @@ function updateFullFishbone() {
   weekEnd.setDate(weekStart.getDate() + 6);
 
   // 更新周标题
-  // 检查元素是否存在
   const weekRangeElement = document.getElementById('current-week-range');
   if (weekRangeElement) {
     const weekRange = `${weekStart.getFullYear()}年${weekStart.getMonth() + 1}月${weekStart.getDate()}日 - ${weekEnd.getMonth() + 1}月${weekEnd.getDate()}日`;
@@ -1002,7 +1071,7 @@ function updateFullFishbone() {
              scheduleDate.getMonth() === dayDate.getMonth() && 
              scheduleDate.getFullYear() === dayDate.getFullYear();
     });
-    
+
     // 将日程分为上午和下午
     daySchedules.forEach(schedule => {
       const scheduleTime = new Date(schedule.start_time);
@@ -1020,7 +1089,7 @@ function updateFullFishbone() {
         timeClass = 'fishbone-event-evening';
         eventsBottom.appendChild(eventElement);
       }
-      
+
       eventElement.className = `fishbone-event ${timeClass}`;
       eventElement.textContent = schedule.title;
       eventElement.setAttribute('data-schedule-id', schedule.id);
@@ -1028,7 +1097,7 @@ function updateFullFishbone() {
       // 添加点击事件查看详情
       eventElement.addEventListener('click', () => viewScheduleDetails(schedule.id));
     });
-    
+
     dayElement.appendChild(eventsTop);
     dayElement.appendChild(dayLabel);
     dayElement.appendChild(eventsBottom);
@@ -1051,12 +1120,12 @@ function loadUpcomingSchedules() {
     .filter(schedule => new Date(schedule.start_time) >= today)
     .sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
     .slice(0, 6);
-    
+
   if (upcomingSchedules.length === 0) {
     container.innerHTML = '<div class="text-center p-3">暂无即将到来的日程</div>';
     return;
   }
-  
+
   upcomingSchedules.forEach(schedule => {
     const startTime = new Date(schedule.start_time);
     const formattedDate = startTime.toLocaleString('zh-CN', {
@@ -1066,7 +1135,7 @@ function loadUpcomingSchedules() {
       hour: '2-digit',
       minute: '2-digit'
     });
-    
+
     const scheduleElement = document.createElement('div');
     scheduleElement.className = 'upcoming-item';
     scheduleElement.innerHTML = `
@@ -1093,7 +1162,7 @@ function viewScheduleDetails(scheduleId) {
   // 填充详情
   const titleEl = document.getElementById('schedule-title');
   if (titleEl) titleEl.textContent = schedule.title || '未命名日程';
-  
+
   const descEl = document.getElementById('schedule-description');
   if (descEl) descEl.textContent = schedule.description || '无描述';
   
@@ -1101,14 +1170,14 @@ function viewScheduleDetails(scheduleId) {
   if (startEl && schedule.start_time) {
     startEl.textContent = new Date(schedule.start_time).toLocaleString('zh-CN');
   }
-  
+
   const endEl = document.getElementById('schedule-end-time');
   if (endEl) {
     endEl.textContent = schedule.end_time ? 
       new Date(schedule.end_time).toLocaleString('zh-CN') : 
       '无结束时间';
   }
-  
+
   const locEl = document.getElementById('schedule-location');
   if (locEl) locEl.textContent = schedule.location || '未指定地点';
 
@@ -1170,8 +1239,7 @@ async function handleAddSchedule() {
       alert(data.message || '创建日程失败');
     }
   } catch (error) {
-    console.error('创建日程错误:', error);
-    alert('创建日程过程中发生错误');
+    handleApiError(error, '创建日程过程中发生错误');
   }
 }
 
@@ -1191,10 +1259,117 @@ async function loadNotificationsData() {
     updateNotificationsPage();
     
     // 更新头部通知计数
-    document.getElementById('notification-count').textContent = notifications.length;
+    updateNotificationCount();
   } catch (error) {
-    console.error('加载通知数据失败:', error);
-    alert('加载通知数据失败，请刷新页面重试');
+    handleApiError(error, '加载通知数据失败，请刷新页面重试');
+  }
+}
+
+// 切换通知下拉菜单
+function toggleNotificationDropdown(e) {
+  if (e) e.stopPropagation();
+  const dropdown = document.getElementById('notification-dropdown');
+  
+  if (dropdown.classList.contains('show')) {
+    dropdown.classList.remove('show');
+  } else {
+    dropdown.classList.add('show');
+    updateNotificationDropdown();
+  }
+}
+
+// 更新通知下拉菜单内容
+function updateNotificationDropdown() {
+  const notificationsList = document.getElementById('notification-dropdown-list');
+  
+  // 清空现有内容
+  notificationsList.innerHTML = '';
+  
+  // 如果还没有加载通知数据，先加载
+  if (notifications.length === 0) {
+    notificationsList.innerHTML = '<div class="dropdown-notification-placeholder">加载中...</div>';
+    
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    if (!token) return;
+    
+    fetch('/api/notifications', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    .then(response => response.json())
+    .then(data => {
+      notifications = data;
+      renderNotificationDropdown();
+    })
+    .catch(error => {
+      handleApiError(error, '加载通知失败');
+      notificationsList.innerHTML = '<div class="dropdown-notification-placeholder">加载通知失败</div>';
+    });
+  } else {
+    renderNotificationDropdown();
+  }
+}
+
+// 渲染通知下拉菜单内容
+function renderNotificationDropdown() {
+  const notificationsList = document.getElementById('notification-dropdown-list');
+  
+  // 清空现有内容
+  notificationsList.innerHTML = '';
+  
+  if (notifications.length === 0) {
+    notificationsList.innerHTML = '<div class="dropdown-notification-placeholder">暂无通知</div>';
+    return;
+  }
+  
+  // 获取最近的5条通知
+  const recentNotifications = notifications
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 5);
+  
+  // 添加通知项
+  recentNotifications.forEach(notification => {
+    const notificationItem = document.createElement('div');
+    notificationItem.className = `dropdown-notification ${getNotificationTypeClass(notification.type)}`;
+    notificationItem.setAttribute('data-reference-id', notification.reference_id || '');
+    notificationItem.setAttribute('data-type', notification.type || '');
+    
+    const notificationTime = new Date(notification.created_at).toLocaleString('zh-CN', {
+      month: 'numeric',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    
+    notificationItem.innerHTML = `
+      <div class="dropdown-notification-title">${notification.title}</div>
+      <div class="dropdown-notification-content">${notification.content}</div>
+      <div class="dropdown-notification-time">${notificationTime}</div>
+    `;
+    
+    notificationItem.addEventListener('click', () => {
+      toggleNotificationDropdown(); // 关闭下拉菜单
+      handleNotificationClick(notification);
+    });
+    
+    notificationsList.appendChild(notificationItem);
+  });
+}
+
+// 更新通知计数
+function updateNotificationCount() {
+  // 计算未读通知数量
+  const unreadCount = notifications.filter(n => !n.is_read).length;
+  const notificationCountElement = document.getElementById('notification-count');
+  
+  if (notificationCountElement) {
+    notificationCountElement.textContent = unreadCount;
+    
+    // 如果没有通知，隐藏计数徽章
+    if (unreadCount === 0) {
+      notificationCountElement.style.display = 'none';
+    } else {
+      notificationCountElement.style.display = 'flex';
+    }
   }
 }
 
@@ -1210,7 +1385,7 @@ function updateNotificationsPage() {
     container.innerHTML = '<div class="alert alert-info">暂无通知</div>';
     return;
   }
-
+  
   // 创建通知列表
   const notificationList = document.createElement('div');
   notificationList.className = 'notification-list';
@@ -1221,15 +1396,21 @@ function updateNotificationsPage() {
     // 添加数据属性存储引用ID和类型
     notificationElement.setAttribute('data-reference-id', notification.reference_id || '');
     notificationElement.setAttribute('data-type', notification.type || '');
+    notificationElement.setAttribute('data-id', notification.id);
+    
+    // 如果已读，添加已读样式
+    if (notification.is_read) {
+      notificationElement.classList.add('is-read');
+    }
     
     const notificationTime = new Date(notification.created_at).toLocaleString('zh-CN', { 
-      year: 'numeric',
+      year: 'numeric', 
       month: 'long',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     });
-    
+
     notificationElement.innerHTML = `
       <div class="notification-header">
         <div class="notification-title">${notification.title}</div>
@@ -1278,6 +1459,12 @@ function filterNotifications() {
 
 // 新增：处理通知点击
 function handleNotificationClick(notification) {
+  // 标记通知为已读
+  if (!notification.is_read) {
+    markNotificationAsRead(notification.id);
+    notification.is_read = true;
+  }
+  
   if (!notification.type || !notification.reference_id) return;
   
   switch (notification.type) {
@@ -1321,6 +1508,50 @@ function handleNotificationClick(notification) {
     case 'announcement':
       // 仅显示公告内容，无需跳转
       break;
+  }
+}
+
+// 标记通知为已读
+async function markNotificationAsRead(notificationId) {
+  try {
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    if (!token) return;
+
+    const response = await fetch(`/api/notifications/${notificationId}/read`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.ok) {
+      // 更新本地通知数据
+      const notification = notifications.find(n => n.id == notificationId);
+      if (notification) {
+        notification.is_read = true;
+      }
+      
+      // 更新UI
+      updateNotificationCount();
+      
+      // 如果通知下拉框正在显示，更新其显示
+      const dropdown = document.getElementById('notification-dropdown');
+      if (dropdown && dropdown.classList.contains('show')) {
+        renderNotificationDropdown();
+      }
+      
+      // 如果在通知页面，更新通知项的样式
+      if (currentPage === 'notifications') {
+        const notificationItem = document.querySelector(`.notification-item[data-id="${notificationId}"]`);
+        if (notificationItem) {
+          notificationItem.classList.add('is-read');
+        }
+      }
+    }
+  } catch (error) {
+    console.error('标记通知已读错误:', error);
+    // 这里不需要显示错误，因为这是后台操作
   }
 }
 
@@ -1370,8 +1601,7 @@ async function handleAddNotification() {
       alert(data.message || '发布公告失败');
     }
   } catch (error) {
-    console.error('发布公告错误:', error);
-    alert('发布公告过程中发生错误');
+    handleApiError(error, '发布公告过程中发生错误');
   }
 }
 
@@ -1394,8 +1624,7 @@ async function loadUsersData() {
     users = await response.json();
     updateUsersTable();
   } catch (error) {
-    console.error('加载用户数据失败:', error);
-    alert('加载用户数据失败，请刷新页面重试');
+    handleApiError(error, '加载用户数据失败，请刷新页面重试');
   }
 }
 
@@ -1426,7 +1655,6 @@ function updateUsersTable() {
 
   filteredUsers.forEach(user => {
     const row = document.createElement('tr');
-    
     const avatarUrl = user.avatar ? `img/avatars/${user.avatar}` : 'img/default-avatar.jpg';
     const createdAt = user.created_at ? new Date(user.created_at).toLocaleDateString('zh-CN') : '未知';
     const department = user.department || '未分配';
@@ -1474,7 +1702,7 @@ function openUserModal(userId = null) {
   // 设置标题
   const modalElement = document.getElementById('user-modal');
   modalElement.querySelector('.modal-title').textContent = userId ? '编辑成员' : '添加新成员';
-
+  
   // 如果是编辑模式，填充数据
   if (userId) {
     const user = users.find(u => u.id == userId);
@@ -1569,8 +1797,7 @@ async function handleSaveUser() {
       alert(data.message || (isEditing ? '更新成员失败' : '添加成员失败'));
     }
   } catch (error) {
-    console.error('保存成员错误:', error);
-    alert('保存成员信息过程中发生错误');
+    handleApiError(error, '保存成员信息过程中发生错误');
   }
 }
 
@@ -1607,8 +1834,7 @@ async function deleteUser(userId) {
       alert(data.message || '删除成员失败');
     }
   } catch (error) {
-    console.error('删除成员错误:', error);
-    alert('删除成员过程中发生错误');
+    handleApiError(error, '删除成员过程中发生错误');
   }
 }
 
@@ -1621,4 +1847,208 @@ function toggleSidebar() {
 function toggleDarkMode() {
   darkMode = !darkMode;
   document.body.classList.toggle('dark-mode', darkMode);
+  
+  // 更新主题设置
+  const theme = darkMode ? 'dark' : 'light';
+  localStorage.setItem('theme', theme);
+  
+  // 更新设置页面的单选框
+  if (currentPage === 'settings') {
+    if (darkMode) {
+      document.getElementById('theme-dark').checked = true;
+    } else {
+      document.getElementById('theme-light').checked = true;
+    }
+  };
+  
+  // 更新图标
+  const themeSwitch = document.querySelector('.theme-switch i');
+  if (themeSwitch) {
+    themeSwitch.className = darkMode ? 'fas fa-sun' : 'fas fa-moon';
+  }
+}
+
+// 加载设置页面数据
+function loadSettingsData() {
+  // 填充用户个人信息
+  if (currentUser) {
+    document.getElementById('personal-name').value = currentUser.name || '';
+    document.getElementById('personal-department').value = currentUser.department || '';
+    
+    // 填充浏览器信息
+    const browserInfo = `${navigator.userAgent}`;
+    document.getElementById('browser-info').textContent = browserInfo;
+  }
+
+  // 设置主题选项
+  const savedTheme = localStorage.getItem('theme') || 'light';
+  if (savedTheme === 'dark') {
+    document.getElementById('theme-dark').checked = true;
+  } else if (savedTheme === 'auto') {
+    document.getElementById('theme-auto').checked = true;
+  } else {
+    document.getElementById('theme-light').checked = true;
+  }
+
+  // 加载通知设置偏好
+  try {
+    const notificationSettings = JSON.parse(localStorage.getItem('settings.notifications')) || {};
+    document.getElementById('email-notifications').checked = notificationSettings.email !== false;
+    document.getElementById('task-notifications').checked = notificationSettings.task !== false;
+    document.getElementById('system-notifications').checked = notificationSettings.system !== false;
+  } catch (error) {
+    console.warn('加载通知设置失败', error);
+    // 使用默认值
+    document.getElementById('email-notifications').checked = true;
+    document.getElementById('task-notifications').checked = true;
+    document.getElementById('system-notifications').checked = true;
+  }
+}
+
+// 保存个人设置
+async function savePersonalSettings() {
+  try {
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    if (!token || !currentUser) return;
+
+    const name = document.getElementById('personal-name').value;
+    const department = document.getElementById('personal-department').value;
+    const password = document.getElementById('personal-password').value;
+    const confirmPassword = document.getElementById('personal-password-confirm').value;
+
+    // 基本验证
+    if (!name) {
+      alert('请输入姓名');
+      return;
+    }
+
+    // 密码验证
+    if (password && password !== confirmPassword) {
+      alert('两次输入的密码不一致');
+      return;
+    }
+
+    // 准备更新数据
+    const userData = {
+      name,
+      department
+    };
+    if (password) {
+      userData.password = password;
+    }
+
+    // 发送更新请求
+    const response = await fetch(`/api/users/${currentUser.id}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(userData)
+    });
+
+    if (response.ok) {
+      const updatedUser = await response.json();
+      currentUser.name = updatedUser.name;
+      currentUser.department = updatedUser.department;
+
+      // 更新界面显示
+      updateUserInfo();
+
+      // 清空密码字段
+      document.getElementById('personal-password').value = '';
+      document.getElementById('personal-password-confirm').value = '';
+
+      alert('个人设置已更新');
+    } else {
+      const data = await response.json();
+      alert(data.message || '更新设置失败');
+    }
+  } catch (error) {
+    handleApiError(error, '保存设置过程中发生错误');
+  }
+}
+
+// 保存系统设置
+function saveSystemSettings() {
+  try {
+    // 获取主题设置
+    let theme = 'light';
+    if (document.getElementById('theme-dark').checked) {
+      theme = 'dark';
+    } else if (document.getElementById('theme-auto').checked) {
+      theme = 'auto';
+    }
+    
+    // 保存主题设置
+    localStorage.setItem('theme', theme);
+    setTheme(theme);
+
+    // 获取通知设置
+    const emailNotifications = document.getElementById('email-notifications').checked;
+    const taskNotifications = document.getElementById('task-notifications').checked;
+    const systemNotifications = document.getElementById('system-notifications').checked;
+
+    // 保存通知设置
+    localStorage.setItem('settings.notifications', JSON.stringify({
+      email: emailNotifications,
+      task: taskNotifications,
+      system: systemNotifications
+    }));
+
+    alert('系统设置已保存');
+  } catch (error) {
+    handleApiError(error, '保存设置过程中发生错误');
+  }
+}
+
+// 设置主题
+function setTheme(theme) {
+  // 移除现有主题类
+  document.body.classList.remove('dark-mode');
+  
+  if (theme === 'dark') {
+    document.body.classList.add('dark-mode');
+    darkMode = true;
+  } else if (theme === 'auto') {
+    // 检查系统偏好
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      document.body.classList.add('dark-mode');
+      darkMode = true;
+    } else {
+      darkMode = false;
+    }
+    
+    // 监听系统主题变化
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+      if (localStorage.getItem('theme') === 'auto') {
+        if (e.matches) {
+          document.body.classList.add('dark-mode');
+          darkMode = true;
+        } else {
+          document.body.classList.remove('dark-mode');
+          darkMode = false;
+        }
+      }
+    });
+  } else {
+    darkMode = false;
+  }
+  
+  // 更新开关图标
+  const themeSwitch = document.querySelector('.theme-switch i');
+  if (themeSwitch) {
+    themeSwitch.className = darkMode ? 'fas fa-sun' : 'fas fa-moon';
+  }
+}
+
+// 处理API错误
+function handleApiError(error, defaultMessage) {
+  console.error(error);
+  // 检查是否是网络连接问题
+  if (!navigator.onLine) {
+    alert('网络连接问题，请检查您的网络设置并重试');
+    return;
+  }
+  alert(error.message || defaultMessage || '操作过程中发生错误，请稍后重试');
 }

@@ -217,7 +217,7 @@ a:hover {
 
 .notification-bell i {
   font-size: 20px;
-  color: var (--text-light);
+  color: var(--text-light);
 }
 
 .notification-bell .badge {
@@ -233,6 +233,122 @@ a:hover {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* 通知下拉菜单 */
+.notification-dropdown {
+  position: absolute;
+  top: 100%;
+  right: -10px;
+  width: 320px;
+  max-height: 400px;
+  background-color: var(--bg-light);
+  border-radius: var(--radius);
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  display: none;
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.notification-dropdown.show {
+  display: block;
+  animation: fadeInDown 0.3s;
+}
+
+.notification-dropdown-header {
+  padding: 12px 15px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.notification-dropdown-header h6 {
+  margin: 0;
+  font-weight: 600;
+}
+
+.close-notification {
+  cursor: pointer;
+  color: var(--text-light);
+  padding: 5px;
+}
+
+.close-notification:hover {
+  color: var(--text-color);
+}
+
+.notification-dropdown-body {
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 10px 0;
+}
+
+.dropdown-notification {
+  padding: 10px 15px;
+  border-bottom: 1px solid var(--border-color);
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.dropdown-notification:hover {
+  background-color: var(--bg-color);
+}
+
+.dropdown-notification:last-child {
+  border-bottom: none;
+}
+
+.dropdown-notification-title {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 3px;
+  color: var(--text-color);
+}
+
+.dropdown-notification-content {
+  font-size: 12px;
+  color: var(--text-light);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropdown-notification-time {
+  font-size: 11px;
+  color: var(--text-lighter);
+  margin-top: 3px;
+}
+
+.dropdown-notification-placeholder {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-light);
+}
+
+.notification-dropdown-footer {
+  padding: 10px 15px;
+  text-align: center;
+  border-top: 1px solid var(--border-color);
+}
+
+.view-all-link {
+  color: var(--primary-color);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* 添加下拉菜单动画 */
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .theme-switch {
@@ -386,6 +502,31 @@ a:hover {
 
 .back-button i {
   font-size: 18px;
+}
+
+/* 登录页面样式修复 */
+body.login-layout {
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+  overflow: hidden;
+}
+
+body.login-layout .sidebar {
+  display: none !important; /* 强制隐藏侧边栏 */
+}
+
+body.login-layout .main-content {
+  margin-left: 0;
+  width: 100%;
+  max-width: 100%;
+}
+
+.login-container {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
 }
 
 /* 仪表盘页面 */
